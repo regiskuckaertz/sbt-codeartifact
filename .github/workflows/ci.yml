@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # sbt-dynver needs full history to compute snapshot versions
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'sbt'
+
+      - uses: sbt/setup-sbt@v1
+
+      - name: Compile
+        run: sbt compile
+
+      - name: Scripted tests
+        run: sbt scripted

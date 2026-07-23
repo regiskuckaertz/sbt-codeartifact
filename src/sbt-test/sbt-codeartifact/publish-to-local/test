@@ -1,2 +1,2 @@
 > publish
-$ exists local-repo/com/example/publish-to-local-test_3/0.1.0/publish-to-local-test_3-0.1.0.pom
+> assertPublished
