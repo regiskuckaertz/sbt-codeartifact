@@ -1,5 +1,5 @@
 name         := "sbt-codeartifact"
-organization := "com.pirum.sbt"
+organization := "io.github.regiskuckaertz"
 
 sbtPlugin    := true
 scalaVersion := "3.8.4"

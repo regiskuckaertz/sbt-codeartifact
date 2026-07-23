@@ -1,4 +1,4 @@
-package com.pirum.sbt.codeartifact
+package io.github.regiskuckaertz.sbt.codeartifact
 
 import sbt.*
 

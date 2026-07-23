@@ -12,7 +12,7 @@ An sbt AutoPlugin that transparently wires up resolution and publishing for a pr
 In `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.pirum.sbt" % "sbt-codeartifact" % "<version>")
+addSbtPlugin("io.github.regiskuckaertz" % "sbt-codeartifact" % "<version>")
 ```
 
 ## Configuration

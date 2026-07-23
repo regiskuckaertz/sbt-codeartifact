@@ -1,4 +1,4 @@
-package com.pirum.sbt.codeartifact
+package io.github.regiskuckaertz.sbt.codeartifact
 
 import sbt.*
 import sbt.Keys.*
@@ -28,7 +28,7 @@ object CodeArtifactPlugin extends AutoPlugin {
 
   override def trigger: PluginTrigger = allRequirements
 
-  override def globalSettings: Seq[Setting[?]] = Seq(
+  override def buildSettings: Seq[Setting[?]] = Seq(
     codeArtifactDomain      := None,
     codeArtifactDomainOwner := None,
     codeArtifactRegion      := Some("eu-west-2"),
@@ -44,10 +44,10 @@ object CodeArtifactPlugin extends AutoPlugin {
   override def projectSettings: Seq[Setting[?]] = Seq(
     resolvers ++= {
       (for {
-        domain <- codeArtifactDomain.value
-        owner  <- codeArtifactDomainOwner.value
-        region <- codeArtifactRegion.value
-        repo   <- codeArtifactRepository.value
+        domain <- (ThisBuild / codeArtifactDomain).value
+        owner  <- (ThisBuild / codeArtifactDomainOwner).value
+        region <- (ThisBuild / codeArtifactRegion).value
+        repo   <- (ThisBuild / codeArtifactRepository).value
       } yield {
         val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
         s"CodeArtifact[$repo]" at url
@@ -55,10 +55,10 @@ object CodeArtifactPlugin extends AutoPlugin {
     },
     credentials ++= {
       (for {
-        domain <- codeArtifactDomain.value
-        owner  <- codeArtifactDomainOwner.value
-        region <- codeArtifactRegion.value
-        token  <- codeArtifactToken.value
+        domain <- (ThisBuild / codeArtifactDomain).value
+        owner  <- (ThisBuild / codeArtifactDomainOwner).value
+        region <- (ThisBuild / codeArtifactRegion).value
+        token  <- (ThisBuild / codeArtifactToken).value
       } yield {
         val host = s"$domain-$owner.d.codeartifact.$region.amazonaws.com"
         Credentials("AWS CodeArtifact", host, "aws", token)
@@ -66,16 +66,16 @@ object CodeArtifactPlugin extends AutoPlugin {
     },
     publishTo := {
       for {
-        domain <- codeArtifactDomain.value
-        owner  <- codeArtifactDomainOwner.value
-        region <- codeArtifactRegion.value
-        repo   <- codeArtifactRepository.value
+        domain <- (ThisBuild / codeArtifactDomain).value
+        owner  <- (ThisBuild / codeArtifactDomainOwner).value
+        region <- (ThisBuild / codeArtifactRegion).value
+        repo   <- (ThisBuild / codeArtifactRepository).value
       } yield {
         val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
         s"CodeArtifact[$repo]" at url
       }
     },
-    publishMavenStyle := codeArtifactRepository.value.isDefined
+    publishMavenStyle := (ThisBuild / codeArtifactRepository).value.isDefined
   )
 
   private def fetchToken(
