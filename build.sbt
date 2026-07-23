@@ -26,6 +26,6 @@ scmInfo   := Some(ScmInfo(
 ))
 developers := List(Developer(
   "regiskuckaertz", "Regis Kuckaertz",
-  "regis.kuckaertz@pirum.com",
+  "platen-porter0e@icloud.com",
   url("https://github.com/regiskuckaertz")
 ))

@@ -5,6 +5,9 @@ codeArtifactDomainOwner := Some("123456789012")
 codeArtifactRegion      := Some("eu-west-2")
 codeArtifactRepository  := Some("my-repo")
 
+// Bypass real AWS call
+codeArtifactToken := Some("fake-token")
+
 lazy val assertResolver = taskKey[Unit]("Verify the CodeArtifact resolver URL is correctly configured")
 
 assertResolver := {
