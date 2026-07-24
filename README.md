@@ -17,7 +17,7 @@ addSbtPlugin("io.github.regiskuckaertz" % "sbt-codeartifact" % "<version>")
 
 ## Configuration
 
-Add the following to your root `build.sbt`. All four settings are required; configuring them at `ThisBuild` scope ensures every sub-project picks them up automatically.
+Add the following to your root `build.sbt`. All four settings are required; configuring them in global scope ensures every sub-project picks them up automatically.
 
 ```scala
 codeArtifactDomain      := Some("acme-artifacts")
