@@ -2,6 +2,8 @@ package io.github.regiskuckaertz.sbt.codeartifact
 
 import sbt.*
 import sbt.Keys.*
+import scala.concurrent.duration.*
+import sjsonnew.*
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
@@ -10,18 +12,39 @@ import software.amazon.awssdk.services.codeartifact.CodeartifactClient
 import software.amazon.awssdk.services.codeartifact.model.{CodeartifactException, GetAuthorizationTokenRequest}
 
 object CodeArtifactPlugin extends AutoPlugin {
+  // SBT 2 caches heavily but to benefit from this, one needs to be able to hash
+  // the input keys. The easiest way to achieve this is to provide a JSON codec.
+  given JsonFormat[Region]:
+    def write[J](region: Region, builder: Builder[J]): Unit =
+      builder.writeString(region.toString())
+    def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): Region =
+      jsOpt match {
+        case Some(js) => Region.of(unbuilder.readString(js))
+        case None => Region.EU_WEST_2
+      }
+
+  given JsonFormat[FiniteDuration]:
+    def write[J](duration: FiniteDuration, builder: Builder[J]): Unit =
+      builder.writeLong(duration.toSeconds)
+    def read[J](jsOpt: Option[J], unbuilder: Unbuilder[J]): FiniteDuration =
+      jsOpt match {
+        case Some(js) => FiniteDuration(unbuilder.readLong(js), "seconds")
+        case None => Duration.Zero
+      }
 
   object autoImport extends CodeArtifactKeys {
-    override val codeArtifactDomain: SettingKey[Option[String]] =
+    override val codeArtifactDomain: SettingKey[String] =
       settingKey("AWS CodeArtifact domain name")
-    override val codeArtifactDomainOwner: SettingKey[Option[String]] =
+    override val codeArtifactDomainOwner: SettingKey[String] =
       settingKey("AWS account ID that owns the CodeArtifact domain")
-    override val codeArtifactRegion: SettingKey[Option[String]] =
-      settingKey("AWS region where the CodeArtifact domain is hosted (default: eu-west-2)")
-    override val codeArtifactRepository: SettingKey[Option[String]] =
+    override val codeArtifactRegion: SettingKey[Region] =
+      settingKey("AWS region where the CodeArtifact domain is hosted")
+    override val codeArtifactRepository: SettingKey[String] =
       settingKey("AWS CodeArtifact repository name")
+    override val codeArtifactTokenDuration: SettingKey[FiniteDuration] =
+      settingKey("AWS CodeArtifact token duration")
     override val codeArtifactToken: TaskKey[Option[String]] =
-      taskKey("Fetches a 12-hour bearer token; checks CODEARTIFACT_AUTH_TOKEN env var first")
+      taskKey("Fetches a bearer token; checks CODEARTIFACT_AUTH_TOKEN env var first")
   }
 
   import autoImport.*
@@ -29,98 +52,87 @@ object CodeArtifactPlugin extends AutoPlugin {
   override def trigger: PluginTrigger = allRequirements
 
   override def buildSettings: Seq[Setting[?]] = Seq(
-    codeArtifactDomain      := None,
-    codeArtifactDomainOwner := None,
-    codeArtifactRegion      := Some("eu-west-2"),
-    codeArtifactRepository  := None,
-    codeArtifactToken       := fetchToken(
+    codeArtifactDomain        := "<domain>",
+    codeArtifactDomainOwner   := "<account-id>",
+    codeArtifactRegion        := Region.EU_WEST_2,
+    codeArtifactRepository    := "<repository>",
+    codeArtifactTokenDuration := 7.hours,
+    codeArtifactToken         := fetchToken(
       codeArtifactDomain.value,
       codeArtifactDomainOwner.value,
       codeArtifactRegion.value,
+      codeArtifactTokenDuration.value,
       streams.value.log
     )
   )
 
   override def projectSettings: Seq[Setting[?]] = Seq(
     resolvers ++= {
-      (for {
-        domain <- codeArtifactDomain.value
-        owner  <- codeArtifactDomainOwner.value
-        region <- codeArtifactRegion.value
-        repo   <- codeArtifactRepository.value
-      } yield {
-        val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
-        s"CodeArtifact[$repo]" at url
-      }).toSeq
+      val domain = codeArtifactDomain.value
+      val owner  = codeArtifactDomainOwner.value
+      val region = codeArtifactRegion.value
+      val repo   = codeArtifactRepository.value
+      val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
+      Seq(s"CodeArtifact[$repo]" at url)
     },
     credentials ++= {
-      (for {
-        domain <- codeArtifactDomain.value
-        owner  <- codeArtifactDomainOwner.value
-        region <- codeArtifactRegion.value
-        token  <- codeArtifactToken.value
-      } yield {
-        val host = s"$domain-$owner.d.codeartifact.$region.amazonaws.com"
-        Credentials("AWS CodeArtifact", host, "aws", token)
-      }).toSeq
+      val domain = codeArtifactDomain.value
+      val owner  = codeArtifactDomainOwner.value
+      val region = codeArtifactRegion.value
+      val token  = codeArtifactToken.value
+      val host = s"$domain-$owner.d.codeartifact.$region.amazonaws.com"
+      token.map(token => Credentials("AWS CodeArtifact", host, "aws", token)).toSeq
     },
     publishTo := {
-      for {
-        domain <- codeArtifactDomain.value
-        owner  <- codeArtifactDomainOwner.value
-        region <- codeArtifactRegion.value
-        repo   <- codeArtifactRepository.value
-      } yield {
-        val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
-        s"CodeArtifact[$repo]" at url
-      }
+      val domain = codeArtifactDomain.value
+      val owner  = codeArtifactDomainOwner.value
+      val region = codeArtifactRegion.value
+      val repo   = codeArtifactRepository.value
+      val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
+      Some(s"CodeArtifact[$repo]" at url)
     },
-    publishMavenStyle := codeArtifactRepository.value.isDefined
+    publishMavenStyle := true
   )
 
   private def fetchToken(
-    domain: Option[String],
-    domainOwner: Option[String],
-    region: Option[String],
+    domain: String,
+    domainOwner: String,
+    region: Region,
+    duration: FiniteDuration,
     log: sbt.util.Logger
   ): Option[String] =
-    (domain, domainOwner) match {
-      case (Some(d), Some(owner)) =>
-        Option(System.getenv("CODEARTIFACT_AUTH_TOKEN"))
-          .filter(_.nonEmpty)
-          .orElse {
-            val r = region.getOrElse("eu-west-2")
-            log.info(s"Fetching CodeArtifact token for domain '$d' in region '$r'...")
-            val client = CodeartifactClient.builder()
-              .region(Region.of(r))
-              .credentialsProvider(DefaultCredentialsProvider.create())
-              .httpClientBuilder(UrlConnectionHttpClient.builder())
-              .build()
-            try {
-              val request = GetAuthorizationTokenRequest.builder()
-                .domain(d)
-                .domainOwner(owner)
-                .durationSeconds(43200L)
-                .build()
-              Some(client.getAuthorizationToken(request).authorizationToken())
-            } catch {
-              case e: SdkClientException =>
-                throw new MessageOnlyException(
-                  s"Failed to get CodeArtifact token: ${e.getMessage}\nHint: run `aws sso login`"
-                )
-              case e: CodeartifactException if e.statusCode() == 401 || e.statusCode() == 403 =>
-                throw new MessageOnlyException(
-                  s"CodeArtifact authorization failed: ensure the IAM principal has " +
-                  s"`codeartifact:GetAuthorizationToken` permission. ${e.getMessage}"
-                )
-              case e: CodeartifactException =>
-                throw new MessageOnlyException(
-                  s"CodeArtifact error (HTTP ${e.statusCode()}): ${e.getMessage}"
-                )
-            } finally {
-              client.close()
-            }
-          }
-      case _ => None
-    }
+    Option(System.getenv("CODEARTIFACT_AUTH_TOKEN"))
+      .filter(_.nonEmpty)
+      .orElse {
+        log.info(s"Fetching CodeArtifact token for domain '$domain' in region '$region'...")
+        val client = CodeartifactClient.builder()
+          .region(region)
+          .credentialsProvider(DefaultCredentialsProvider.create())
+          .httpClientBuilder(UrlConnectionHttpClient.builder())
+          .build()
+        try {
+          val request = GetAuthorizationTokenRequest.builder()
+            .domain(domain)
+            .domainOwner(domainOwner)
+            .durationSeconds(duration.toSeconds)
+            .build()
+          Some(client.getAuthorizationToken(request).authorizationToken())
+        } catch {
+          case e: SdkClientException =>
+            throw new MessageOnlyException(
+              s"Failed to get CodeArtifact token: ${e.getMessage}\nHint: run `aws sso login`"
+            )
+          case e: CodeartifactException if e.statusCode() == 401 || e.statusCode() == 403 =>
+            throw new MessageOnlyException(
+              s"CodeArtifact authorization failed: ensure the IAM principal has " +
+              s"`codeartifact:GetAuthorizationToken` permission. ${e.getMessage}"
+            )
+          case e: CodeartifactException =>
+            throw new MessageOnlyException(
+              s"CodeArtifact error (HTTP ${e.statusCode()}): ${e.getMessage}"
+            )
+        } finally {
+          client.close()
+        }
+      }
 }
