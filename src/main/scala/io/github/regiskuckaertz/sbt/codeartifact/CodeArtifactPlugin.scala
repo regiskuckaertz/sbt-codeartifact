@@ -76,9 +76,10 @@ object CodeArtifactPlugin extends AutoPlugin {
       val domain = codeArtifactDomain.value
       val owner  = codeArtifactDomainOwner.value
       val region = codeArtifactRegion.value
+      val repo   = codeArtifactRepository.value
       val token  = codeArtifactToken.value
       val host = s"$domain-$owner.d.codeartifact.$region.amazonaws.com"
-      token.map(token => Credentials("$domain/$repo", host, "aws", token)).toSeq
+      token.map(token => Credentials(s"$domain/$repo", host, "aws", token)).toSeq
     },
     publishTo := {
       val domain = codeArtifactDomain.value

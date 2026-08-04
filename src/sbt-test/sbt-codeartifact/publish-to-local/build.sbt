@@ -15,7 +15,7 @@ versionScheme := Some("early-semver")
 publishTo := Some(Resolver.mavenLocal)
 
 lazy val assertPublished = taskKey[Unit]("Verify the artifact was published to Maven local")
-assertPublished := {
+assertPublished := Def.uncached {
   val pom = file(System.getProperty("user.home")) / ".m2" / "repository" /
     "com" / "example" / "publish-to-local-test_3" / "0.1.0" /
     "publish-to-local-test_3-0.1.0.pom"
