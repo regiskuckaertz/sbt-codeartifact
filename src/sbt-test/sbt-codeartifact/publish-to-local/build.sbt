@@ -2,13 +2,13 @@ import software.amazon.awssdk.regions.Region
 
 scalaVersion := "3.8.4"
 
-codeArtifactDomain      := "my-domain"
-codeArtifactDomainOwner := "123456789012"
-codeArtifactRegion      := Region.EU_WEST_1
-codeArtifactRepository  := "my-repo"
+ThisBuild / codeArtifactDomain      := "my-domain"
+ThisBuild / codeArtifactDomainOwner := "123456789012"
+ThisBuild / codeArtifactRegion      := Region.EU_WEST_1
+ThisBuild / codeArtifactRepository  := "my-repo"
 
 // Bypass real AWS call
-codeArtifactToken := Some("fake-token")
+ThisBuild / codeArtifactToken := Some("fake-token")
 
 versionScheme := Some("early-semver")
 

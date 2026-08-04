@@ -63,17 +63,14 @@ object CodeArtifactPlugin extends AutoPlugin {
       codeArtifactRegion.value,
       codeArtifactTokenDuration.value,
       streams.value.log
-    )
-  )
-
-  override def projectSettings: Seq[Setting[?]] = Seq(
+    ),
     resolvers ++= {
       val domain = codeArtifactDomain.value
       val owner  = codeArtifactDomainOwner.value
       val region = codeArtifactRegion.value
       val repo   = codeArtifactRepository.value
       val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
-      Seq(s"CodeArtifact[$repo]" at url)
+      Seq(s"$domain/$repo" at url)
     },
     credentials ++= {
       val domain = codeArtifactDomain.value
@@ -81,7 +78,7 @@ object CodeArtifactPlugin extends AutoPlugin {
       val region = codeArtifactRegion.value
       val token  = codeArtifactToken.value
       val host = s"$domain-$owner.d.codeartifact.$region.amazonaws.com"
-      token.map(token => Credentials("AWS CodeArtifact", host, "aws", token)).toSeq
+      token.map(token => Credentials("$domain/$repo", host, "aws", token)).toSeq
     },
     publishTo := {
       val domain = codeArtifactDomain.value
@@ -89,7 +86,7 @@ object CodeArtifactPlugin extends AutoPlugin {
       val region = codeArtifactRegion.value
       val repo   = codeArtifactRepository.value
       val url = s"https://$domain-$owner.d.codeartifact.$region.amazonaws.com/maven/$repo/"
-      Some(s"CodeArtifact[$repo]" at url)
+      Some(s"$domain/$repo" at url)
     },
     publishMavenStyle := true
   )
