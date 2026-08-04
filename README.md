@@ -20,10 +20,10 @@ addSbtPlugin("io.github.regiskuckaertz" % "sbt-codeartifact" % "<version>")
 Add the following to your root `build.sbt`. All four settings are required; configuring them in global scope ensures every sub-project picks them up automatically.
 
 ```scala
-codeArtifactDomain      := "acme-artifacts"
-codeArtifactDomainOwner := "123456789012"   // AWS account ID
-codeArtifactRegion      := Region.EU_WEST_2 // optional, this is the default
-codeArtifactRepository  := "internal"
+ThisBuild / codeArtifactDomain      := "acme-artifacts"
+ThisBuild / codeArtifactDomainOwner := "123456789012"   // AWS account ID
+ThisBuild / codeArtifactRegion      := Region.EU_WEST_2 // optional, this is the default
+ThisBuild / codeArtifactRepository  := "internal"
 ```
 
 The plugin auto-activates on every JVM project. Until these settings are configured the plugin is a no-op.
