@@ -19,7 +19,7 @@ jobs:
           distribution: 'temurin'
           cache: 'sbt'
 
-      - uses: sbt/setup-sbt@v1.5.7
+      - uses: sbt/setup-sbt@v1.5.8
 
       - name: Compile
         run: sbt compile
