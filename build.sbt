@@ -2,7 +2,7 @@ name         := "sbt-codeartifact"
 organization := "io.github.regiskuckaertz"
 
 sbtPlugin    := true
-scalaVersion := "3.8.4"
+scalaVersion := "3.10.0"
 
 val awsVersion = "2.28.0"
 
